@@ -23,6 +23,18 @@ var PDFImage = (function PDFImageClosure() {
    * when the image data is ready.
    */
   function handleImageData(handler, xref, res, image, promise) {
+
+    if (PDFJS.skipImages === true) {
+      warn('PDFJS.skipImages -- returning one-pixel Stream instead of image data');
+      var dict = image.dict;
+      dict.set('Width', 1);
+      dict.set('Height', 1);
+      dict.set('BitsPerComponent', 1);
+      var stream = new Stream(new Uint8Array(1), 0, 1, dict);
+      promise.resolve(stream);
+      return;
+    }
+
     if (image instanceof JpegStream && image.isNativelyDecodable(xref, res)) {
       // For natively supported jpegs send them to the main thread for decoding.
       var dict = image.dict;
@@ -48,6 +60,10 @@ var PDFImage = (function PDFImageClosure() {
     return value < 0 ? 0 : value > max ? max : value;
   }
   function PDFImage(xref, res, image, inline, smask, mask) {
+    if (PDFJS.skipImages === true) {
+      console.log('  skipImages: true');
+    }
+
     this.image = image;
     if (image.getParams) {
       // JPX/JPEG2000 streams directly contain bits per component
@@ -140,8 +156,8 @@ var PDFImage = (function PDFImageClosure() {
 
     handleImageData(handler, xref, res, image, imageDataPromise);
 
-    var smask = image.dict.get('SMask');
-    var mask = image.dict.get('Mask');
+    var smask = null;
+    var mask = null;
 
     if (smask) {
       handleImageData(handler, xref, res, smask, smaskPromise);
@@ -162,6 +178,7 @@ var PDFImage = (function PDFImageClosure() {
       }
     }
   };
+
 
   /**
    * Resize an image using the nearest neighbor algorithm.  Currently only

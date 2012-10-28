@@ -95,6 +95,7 @@ function getPdf(arg, callback) {
 }
 globalScope.PDFJS.getPdf = getPdf;
 globalScope.PDFJS.pdfBug = false;
+globalScope.PDFJS.skipImages = false;
 
 var Page = (function PageClosure() {
   function Page(xref, pageNumber, pageDict, ref) {
