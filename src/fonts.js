@@ -2258,7 +2258,7 @@ var Font = (function FontClosure() {
                         this.isSerifFont ? 'serif' : 'sans-serif';
 
     this.differences = properties.differences;
-    this.widths = properties.widths;
+    this.widths = properties.widths || {};
     this.defaultWidth = properties.defaultWidth;
     this.composite = properties.composite;
     this.wideChars = properties.wideChars;
