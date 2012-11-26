@@ -2250,6 +2250,9 @@ var Font = (function FontClosure() {
     this.isSerifFont = !!(properties.flags & FontFlags.Serif);
     this.isSymbolicFont = !!(properties.flags & FontFlags.Symbolic);
     this.isMonospace = !!(properties.flags & FontFlags.FixedPitch);
+    this.isItalicFont = !!(properties.flags & FontFlags.Italic);
+    this.isAllCapFont = !!(properties.flags & FontFlags.AllCap);
+    this.isForceBoldFont = !!(properties.flags & FontFlags.ForceBold);
 
     var type = properties.type;
     this.type = type;
