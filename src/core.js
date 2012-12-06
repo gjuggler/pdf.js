@@ -98,8 +98,8 @@ globalScope.PDFJS.pdfBug = false;
 globalScope.PDFJS.skipImages = false;
 
 var Page = (function PageClosure() {
-  function Page(xref, pageNumber, pageDict, ref) {
-    this.pageNumber = pageNumber;
+  function Page(xref, pageIndex, pageDict, ref) {
+    this.pageIndex = pageIndex;
     this.pageDict = pageDict;
     this.xref = xref;
     this.ref = ref;
@@ -168,14 +168,11 @@ var Page = (function PageClosure() {
       }
       return shadow(this, 'rotate', rotate);
     },
-
-    getOperatorList: function Page_getOperatorList(handler, dependency) {
-      var xref = this.xref;
+    getContentStream: function Page_getContentStream() {
       var content = this.content;
-      var resources = this.resources;
       if (isArray(content)) {
         // fetching items
-        var streams = [];
+        var xref = this.xref;
         var i, n = content.length;
         var streams = [];
         for (i = 0; i < n; ++i)
@@ -185,13 +182,19 @@ var Page = (function PageClosure() {
         content.reset();
       } else if (!content) {
         // replacing non-existent page content with empty one
-        content = new Stream(new Uint8Array(0));
+        content = new NullStream();
       }
-
+      return content;
+    },
+    getOperatorList: function Page_getOperatorList(handler, dependency) {
+      var xref = this.xref;
+      var contentStream = this.getContentStream();
+      var resources = this.resources;
       var pe = this.pe = new PartialEvaluator(
-                                xref, handler, 'p' + this.pageNumber + '_');
+                                xref, handler, this.pageIndex,
+                                'p' + this.pageIndex + '_');
 
-      return pe.getOperatorList(content, resources, dependency);
+      return pe.getOperatorList(contentStream, resources, dependency);
     },
     extractTextContent: function Page_extractTextContent() {
       var handler = {
@@ -200,40 +203,13 @@ var Page = (function PageClosure() {
       };
 
       var xref = this.xref;
-      var content = xref.fetchIfRef(this.content);
+      var contentStream = this.getContentStream();
       var resources = xref.fetchIfRef(this.resources);
-      if (isArray(content)) {
-        // fetching items
-        var i, n = content.length;
-        var streams = [];
-        for (i = 0; i < n; ++i)
-          streams.push(xref.fetchIfRef(content[i]));
-        content = new StreamsSequenceStream(streams);
-      } else if (isStream(content)) {
-        content.reset();
-      }
 
       var pe = new PartialEvaluator(
-                     xref, handler, 'p' + this.pageNumber + '_');
-      return pe.getTextContent(content, resources);
-    },
-
-    ensureFonts: function Page_ensureFonts(fonts, callback) {
-      this.stats.time('Font Loading');
-      // Convert the font names to the corresponding font obj.
-      for (var i = 0, ii = fonts.length; i < ii; i++) {
-        fonts[i] = this.objs.objs[fonts[i]].data;
-      }
-
-      // Load all the fonts
-      FontLoader.bind(
-        fonts,
-        function pageEnsureFontsFontObjs(fontObjs) {
-          this.stats.timeEnd('Font Loading');
-
-          callback.call(this);
-        }.bind(this)
-      );
+                     xref, handler, this.pageIndex,
+                     'p' + this.pageIndex + '_');
+      return pe.getTextContent(contentStream, resources);
     },
     getLinks: function Page_getLinks() {
       var links = [];
@@ -459,6 +435,7 @@ var PDFDocument = (function PDFDocumentClosure() {
         } catch (err) {
           warn('The linearization data is not available ' +
                'or unreadable pdf data is found');
+          linearization = false;
         }
       }
       // shadow the prototype getter with a data property
@@ -519,6 +496,17 @@ var PDFDocument = (function PDFDocumentClosure() {
       if (find(stream, '%PDF-', 1024)) {
         // Found the header, trim off any garbage before it.
         stream.moveStart();
+        // Reading file format version
+        var MAX_VERSION_LENGTH = 12;
+        var version = '', ch;
+        while ((ch = stream.getChar()) > ' ') {
+          if (version.length >= MAX_VERSION_LENGTH) {
+            break;
+          }
+          version += ch;
+        }
+        // removing "%PDF-"-prefix
+        this.pdfFormatVersion = version.substring(5);
         return;
       }
       // May not be a PDF file, continue anyway.
@@ -539,11 +527,12 @@ var PDFDocument = (function PDFDocumentClosure() {
       return shadow(this, 'numPages', num);
     },
     getDocumentInfo: function PDFDocument_getDocumentInfo() {
-      var docInfo;
+      var docInfo = {
+        PDFFormatVersion: this.pdfFormatVersion
+      };
       if (this.xref.trailer.has('Info')) {
         var infoDict = this.xref.trailer.get('Info');
 
-        docInfo = {};
         var validEntries = DocumentInfoValidators.entries;
         // Only fill the document info with valid entries from the spec.
         for (var key in validEntries) {

@@ -18,12 +18,13 @@
 'use strict';
 
 var PartialEvaluator = (function PartialEvaluatorClosure() {
-  function PartialEvaluator(xref, handler, uniquePrefix) {
+  function PartialEvaluator(xref, handler, pageIndex, uniquePrefix) {
     this.state = new EvalState();
     this.stateStack = [];
 
     this.xref = xref;
     this.handler = handler;
+    this.pageIndex = pageIndex;
     this.uniquePrefix = uniquePrefix;
     this.objIdCounter = 0;
     this.fontIdCounter = 0;
@@ -151,7 +152,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       if (!isDict(font)) {
         return {
           translated: new ErrorFont('Font ' + fontName + ' is not available'),
-          loadedName: 'font_' + this.uniquePrefix + this.fontIdCounter
+          loadedName: 'g_font_' + this.uniquePrefix + this.fontIdCounter
         };
       }
 
@@ -159,7 +160,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       if (!loadedName) {
         // keep track of each font we translated so the caller can
         // load them asynchronously before calling display on a page
-        loadedName = 'font_' + this.uniquePrefix + this.fontIdCounter;
+        loadedName = 'g_font_' + this.uniquePrefix + this.fontIdCounter;
         font.loadedName = loadedName;
 
         var translated;
@@ -197,6 +198,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       var self = this;
       var xref = this.xref;
       var handler = this.handler;
+      var pageIndex = this.pageIndex;
       var uniquePrefix = this.uniquePrefix || '';
 
       function insertDependency(depList) {
@@ -217,7 +219,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         if (!font.sent) {
           var data = font.translated.exportData();
 
-          handler.send('obj', [
+          handler.send('commonobj', [
               loadedName,
               'Font',
               data
@@ -271,7 +273,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             image.isNativelySupported(xref, resources)) {
           // These JPEGs don't need any more processing so we can just send it.
           fn = 'paintJpegXObject';
-          handler.send('obj', [objId, 'JpegStream', image.getIR()]);
+          handler.send('obj', [objId, pageIndex, 'JpegStream', image.getIR()]);
           return;
         }
 
@@ -287,7 +289,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             };
             var pixels = imgData.data;
             imageObj.fillRgbaBuffer(pixels, drawWidth, drawHeight);
-            handler.send('obj', [objId, 'Image', imgData]);
+            handler.send('obj', [objId, pageIndex, 'Image', imgData]);
           }, handler, xref, resources, image, inline);
       }
 
@@ -510,11 +512,11 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       return queue;
     },
 
-    getTextContent: function partialEvaluatorGetIRQueue(
+    getTextContent: function PartialEvaluator_getTextContent(
                                                     stream, resources, state) {
       var bidiTexts;
-      var kSpaceFactor = 0.35;
-      var kMultipleSpaceFactor = 1.5;
+      var SPACE_FACTOR = 0.35;
+      var MULTI_SPACE_FACTOR = 1.5;
 
       if (!state) {
         bidiTexts = [];
@@ -557,12 +559,12 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   chunk += fontCharsToUnicode(items[j], font);
                 } else if (items[j] < 0 && font.spaceWidth > 0) {
                   var fakeSpaces = -items[j] / font.spaceWidth;
-                  if (fakeSpaces > kMultipleSpaceFactor) {
+                  if (fakeSpaces > MULTI_SPACE_FACTOR) {
                     fakeSpaces = Math.round(fakeSpaces);
                     while (fakeSpaces--) {
                       chunk += ' ';
                     }
-                  } else if (fakeSpaces > kSpaceFactor) {
+                  } else if (fakeSpaces > SPACE_FACTOR) {
                     chunk += ' ';
                   }
                 }

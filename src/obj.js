@@ -307,8 +307,10 @@ var Catalog = (function CatalogClosure() {
             continue;
           }
           var names = obj.get('Names');
-          for (i = 0, n = names.length; i < n; i += 2) {
-            dests[names[i]] = fetchDestination(xref.fetchIfRef(names[i + 1]));
+          if (names) {
+            for (i = 0, n = names.length; i < n; i += 2) {
+              dests[names[i]] = fetchDestination(xref.fetchIfRef(names[i + 1]));
+            }
           }
         }
       }
@@ -701,7 +703,8 @@ var XRef = (function XRefClosure() {
       }
 
       // compressed entry
-      stream = this.fetch(new Ref(e.offset, 0));
+      var tableOffset = e.offset;
+      stream = this.fetch(new Ref(tableOffset, 0));
       if (!isStream(stream))
         error('bad ObjStm stream');
       var first = stream.parameters.get('First');
@@ -710,6 +713,7 @@ var XRef = (function XRefClosure() {
         error('invalid first and n parameters for ObjStm stream');
       }
       parser = new Parser(new Lexer(stream), false, this);
+      parser.allowStreams = true;
       var i, entries = [], nums = [];
       // read the object numbers to populate cache
       for (i = 0; i < n; ++i) {
@@ -726,7 +730,11 @@ var XRef = (function XRefClosure() {
       // read stream objects for cache
       for (i = 0; i < n; ++i) {
         entries.push(parser.getObj());
-        this.cache[nums[i]] = entries[i];
+        num = nums[i];
+        var entry = this.entries[num];
+        if (entry && entry.offset === tableOffset && entry.gen === i) {
+          this.cache[num] = entries[i];
+        }
       }
       e = entries[e.gen];
       if (!e) {
@@ -754,8 +762,6 @@ var PDFObjects = (function PDFObjectsClosure() {
   }
 
   PDFObjects.prototype = {
-    objs: null,
-
     /**
      * Internal function.
      * Ensures there is an object defined for `objId`. Stores `data` on the
@@ -833,12 +839,28 @@ var PDFObjects = (function PDFObjectsClosure() {
     },
 
     /**
+     * Returns the data of `objId` if object exists, null otherwise.
+     */
+    getData: function PDFObjects_getData(objId) {
+      var objs = this.objs;
+      if (!objs[objId] || !objs[objId].hasData) {
+        return null;
+      } else {
+        return objs[objId].data;
+      }
+    },
+
+    /**
      * Sets the data of an object but *doesn't* resolve it.
      */
     setData: function PDFObjects_setData(objId, data) {
       // Watchout! If you call `this.ensureObj(objId, data)` you're going to
       // create a *resolved* promise which shouldn't be the case!
       this.ensureObj(objId).data = data;
+    },
+
+    clear: function PDFObjects_clear() {
+      this.objs = {};
     }
   };
   return PDFObjects;

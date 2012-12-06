@@ -85,7 +85,7 @@ target.generic = function() {
       ['external/webL10n/l10n.js', GENERIC_DIR + '/web'],
       ['web/compatibility.js', GENERIC_DIR + '/web'],
       ['web/compressed.tracemonkey-pldi-09.pdf', GENERIC_DIR + '/web'],
-      ['web/locale.properties', GENERIC_DIR + '/web']
+      ['web/locale', GENERIC_DIR + '/web']
     ],
     preprocess: [
       [BUILD_TARGET, GENERIC_DIR + BUILD_TARGET],
@@ -123,6 +123,7 @@ target.web = function() {
   cp(CHROME_BUILD_DIR + '/*.crx', FIREFOX_BUILD_DIR + '/*.rdf',
      GH_PAGES_DIR + EXTENSION_SRC_DIR + 'chrome/');
   cp('web/index.html.template', GH_PAGES_DIR + '/index.html');
+  cp('-R', 'test/features', GH_PAGES_DIR);
 
   cd(GH_PAGES_DIR);
   exec('git init');
@@ -143,7 +144,7 @@ target.locale = function() {
   var METADATA_OUTPUT = 'extensions/firefox/metadata.inc';
   var CHROME_MANIFEST_OUTPUT = 'extensions/firefox/chrome.manifest.inc';
   var EXTENSION_LOCALE_OUTPUT = 'extensions/firefox/locale';
-  var VIEWER_OUTPUT = 'web/locale.properties';
+  var VIEWER_LOCALE_OUTPUT = 'web/locale/';
 
   cd(ROOT_DIR);
   echo();
@@ -151,6 +152,8 @@ target.locale = function() {
 
   rm('-rf', EXTENSION_LOCALE_OUTPUT);
   mkdir('-p', EXTENSION_LOCALE_OUTPUT);
+  rm('-rf', VIEWER_LOCALE_OUTPUT);
+  mkdir('-p', VIEWER_LOCALE_OUTPUT);
 
   var subfolders = ls(LOCALE_SRC_DIR);
   subfolders.sort();
@@ -169,13 +172,15 @@ target.locale = function() {
     }
 
     mkdir('-p', EXTENSION_LOCALE_OUTPUT + '/' + locale);
+    mkdir('-p', VIEWER_LOCALE_OUTPUT + '/' + locale);
     chromeManifestContent += 'locale  pdf.js  ' + locale + '  locale/' +
                              locale + '/\n';
 
     if (test('-f', path + '/viewer.properties')) {
-      var properties = cat(path + '/viewer.properties');
-      viewerOutput += '[' + locale + ']\n' + properties + '\n';
+      viewerOutput += '[' + locale + ']\n' +
+                      '@import url(' + locale + '/viewer.properties)\n\n';
       cp(path + '/viewer.properties', EXTENSION_LOCALE_OUTPUT + '/' + locale);
+      cp(path + '/viewer.properties', VIEWER_LOCALE_OUTPUT + '/' + locale);
     }
 
     if (test('-f', path + '/chrome.properties')) {
@@ -187,7 +192,7 @@ target.locale = function() {
       metadataContent += metadata;
     }
   }
-  viewerOutput.to(VIEWER_OUTPUT);
+  viewerOutput.to(VIEWER_LOCALE_OUTPUT + 'locale.properties');
   metadataContent.to(METADATA_OUTPUT);
   chromeManifestContent.to(CHROME_MANIFEST_OUTPUT);
 };
@@ -354,7 +359,8 @@ target.firefox = function() {
        FIREFOX_BUILD_CONTENT_DIR + '/web']
     ],
     preprocess: [
-      [COMMON_WEB_FILES_PREPROCESS, FIREFOX_BUILD_CONTENT_DIR + '/web']
+      [COMMON_WEB_FILES_PREPROCESS, FIREFOX_BUILD_CONTENT_DIR + '/web'],
+      [BUILD_TARGET, FIREFOX_BUILD_CONTENT_DIR + BUILD_TARGET]
     ]
   };
   builder.build(setup);
@@ -418,8 +424,7 @@ target.mozcentral = function() {
       MOZCENTRAL_TEST_DIR = MOZCENTRAL_EXTENSION_DIR + 'test/',
       FIREFOX_CONTENT_DIR = EXTENSION_SRC_DIR + '/firefox/content/',
       FIREFOX_EXTENSION_FILES_TO_COPY =
-        ['components/*.js',
-         '*.svg',
+        ['*.svg',
          '*.png',
          '*.manifest',
          'README.mozilla',
@@ -462,7 +467,8 @@ target.mozcentral = function() {
       ['extensions/firefox/tools/l10n.js', MOZCENTRAL_CONTENT_DIR + '/web']
     ],
     preprocess: [
-      [COMMON_WEB_FILES_PREPROCESS, MOZCENTRAL_CONTENT_DIR + '/web']
+      [COMMON_WEB_FILES_PREPROCESS, MOZCENTRAL_CONTENT_DIR + '/web'],
+      [BUILD_TARGET, MOZCENTRAL_CONTENT_DIR + BUILD_TARGET]
     ]
   };
   builder.build(setup);
@@ -503,6 +509,8 @@ target.mozcentral = function() {
 };
 
 target.b2g = function() {
+  target.locale();
+  target.bundle();
   echo();
   echo('### Building B2G (Firefox OS App)');
   var B2G_BUILD_DIR = BUILD_DIR + '/b2g/',
@@ -520,12 +528,14 @@ target.b2g = function() {
   var setup = {
     defines: defines,
     copy: [
-      [COMMON_WEB_FILES, B2G_BUILD_CONTENT_DIR + '/web'],
-      ['web/locale.properties', B2G_BUILD_CONTENT_DIR + '/web'],
+      ['extensions/b2g/images', B2G_BUILD_CONTENT_DIR + '/web'],
+      ['extensions/b2g/viewer.html', B2G_BUILD_CONTENT_DIR + '/web'],
+      ['extensions/b2g/viewer.css', B2G_BUILD_CONTENT_DIR + '/web'],
+      ['web/locale', B2G_BUILD_CONTENT_DIR + '/web'],
       ['external/webL10n/l10n.js', B2G_BUILD_CONTENT_DIR + '/web']
     ],
     preprocess: [
-      [COMMON_WEB_FILES_PREPROCESS, B2G_BUILD_CONTENT_DIR + '/web'],
+      ['web/viewer.js', B2G_BUILD_CONTENT_DIR + '/web'],
       [BUILD_TARGET, B2G_BUILD_CONTENT_DIR + BUILD_TARGET]
     ]
   };
@@ -563,11 +573,11 @@ target.chrome = function() {
         'extensions/chrome/*.js'],
        CHROME_BUILD_DIR],
       [BUILD_TARGET, CHROME_BUILD_CONTENT_DIR + BUILD_TARGET],
-      ['external/webL10n/l10n.js', CHROME_BUILD_CONTENT_DIR + '/web']
+      ['external/webL10n/l10n.js', CHROME_BUILD_CONTENT_DIR + '/web'],
+      ['web/locale', CHROME_BUILD_CONTENT_DIR + '/web']
     ],
     preprocess: [
-      [COMMON_WEB_FILES_PREPROCESS, CHROME_BUILD_CONTENT_DIR + '/web'],
-      ['web/locale.properties', CHROME_BUILD_CONTENT_DIR + '/web']
+      [COMMON_WEB_FILES_PREPROCESS, CHROME_BUILD_CONTENT_DIR + '/web']
     ]
   };
   builder.build(setup);
@@ -662,7 +672,9 @@ target.test = function() {
 //
 target.bottest = function() {
   target.unittest({}, function() {
-    target.browsertest({noreftest: true});
+    target.fonttest({}, function() {
+      target.browsertest({noreftest: true});
+    });
   });
 };
 
@@ -714,6 +726,28 @@ target.unittest = function(options, callback) {
 };
 
 //
+// make fonttest
+//
+target.fonttest = function(options, callback) {
+  cd(ROOT_DIR);
+  echo();
+  echo('### Running font tests');
+
+  var PDF_BROWSERS = env['PDF_BROWSERS'] ||
+                     'resources/browser_manifests/browser_manifest.json';
+
+  if (!test('-f', 'test/' + PDF_BROWSERS)) {
+    echo('Browser manifest file test/' + PDF_BROWSERS + ' does not exist.');
+    echo('Copy one of the examples in test/resources/browser_manifests/');
+    exit(1);
+  }
+  callback = callback || function() {};
+  cd('test');
+  exec(PYTHON_BIN + ' -u test.py --fontTest --browserManifestFile=' +
+       PDF_BROWSERS, {async: true}, callback);
+};
+
+//
 // make botmakeref
 //
 target.botmakeref = function() {
@@ -734,6 +768,163 @@ target.botmakeref = function() {
   cd('test');
   exec(PYTHON_BIN + ' -u test.py --masterMode --noPrompts ' +
        '--browserManifestFile=' + PDF_BROWSERS, {async: true});
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Baseline operation
+//
+target.baseline = function() {
+  cd(ROOT_DIR);
+
+  echo();
+  echo('### Creating baseline environment');
+
+  var baselineCommit = env['BASELINE'];
+  if (!baselineCommit) {
+    echo('Baseline commit is not provided. Please specify BASELINE variable');
+    exit(1);
+  }
+
+  if (!test('-d', BUILD_DIR))
+    mkdir(BUILD_DIR);
+
+  var BASELINE_DIR = BUILD_DIR + 'baseline';
+  if (test('-d', BASELINE_DIR)) {
+    cd(BASELINE_DIR);
+    exec('git fetch origin');
+  } else {
+    cd(BUILD_DIR);
+    exec('git clone .. baseline');
+    cd(ROOT_DIR + BASELINE_DIR);
+  }
+  exec('git checkout ' + baselineCommit);
+};
+
+target.mozcentralbaseline = function() {
+  target.baseline();
+
+  cd(ROOT_DIR);
+
+  echo();
+  echo('### Creating mozcentral baseline environment');
+
+  var BASELINE_DIR = BUILD_DIR + 'baseline';
+  var MOZCENTRAL_BASELINE_DIR = BUILD_DIR + 'mozcentral.baseline';
+  if (test('-d', MOZCENTRAL_BASELINE_DIR))
+    rm('-rf', MOZCENTRAL_BASELINE_DIR);
+
+  cd(BASELINE_DIR);
+  if (test('-d', 'build'))
+    rm('-rf', 'build');
+  exec('node make mozcentral');
+
+  cd(ROOT_DIR);
+  mkdir(MOZCENTRAL_BASELINE_DIR);
+  cp('-Rf', BASELINE_DIR + '/build/mozcentral/*', MOZCENTRAL_BASELINE_DIR);
+  // fixing baseline
+  if (test('-f', MOZCENTRAL_BASELINE_DIR +
+                 '/browser/extensions/pdfjs/PdfStreamConverter.js')) {
+    rm(MOZCENTRAL_BASELINE_DIR +
+       '/browser/extensions/pdfjs/PdfStreamConverter.js');
+  }
+
+  cd(MOZCENTRAL_BASELINE_DIR);
+  exec('git init');
+  exec('git add .');
+  exec('git commit -m "mozcentral baseline"');
+};
+
+target.mozcentraldiff = function() {
+  target.mozcentral();
+
+  cd(ROOT_DIR);
+
+  echo();
+  echo('### Creating mozcentral diff');
+
+  var MOZCENTRAL_DIFF = BUILD_DIR + 'mozcentral.diff';
+  if (test('-f', MOZCENTRAL_DIFF))
+    rm(MOZCENTRAL_DIFF);
+
+  var MOZCENTRAL_BASELINE_DIR = BUILD_DIR + 'mozcentral.baseline';
+  if (!test('-d', MOZCENTRAL_BASELINE_DIR)) {
+    echo('mozcentral baseline was not found');
+    echo('Please build one using "node make mozcentralbaseline"');
+    exit(1);
+  }
+  cd(MOZCENTRAL_BASELINE_DIR);
+  exec('git reset --hard');
+  cd(ROOT_DIR); rm('-rf', MOZCENTRAL_BASELINE_DIR + '/*'); // trying to be safe
+  cd(MOZCENTRAL_BASELINE_DIR);
+  cp('-Rf', '../mozcentral/*', '.');
+  exec('git add -A');
+  exec('git diff --binary --cached --unified=8', {silent: true}).output.
+    to('../mozcentral.diff');
+
+  echo('Result diff can be found at ' + MOZCENTRAL_DIFF);
+};
+
+target.mozcentralcheck = function() {
+  cd(ROOT_DIR);
+
+  echo();
+  echo('### Checking mozcentral changes');
+
+  var mcPath = env['MC_PATH'];
+  if (!mcPath) {
+    echo('mozilla-central path is not provided.');
+    echo('Please specify MC_PATH variable');
+    exit(1);
+  }
+  if ((mcPath[0] != '/' && mcPath[0] != '~' && mcPath[1] != ':') ||
+      !test('-d', mcPath)) {
+    echo('mozilla-central path is not in absolute form or does not exist.');
+    exit(1);
+  }
+
+  var MOZCENTRAL_DIFF = BUILD_DIR + 'mozcentral_changes.diff';
+  if (test('-f', MOZCENTRAL_DIFF)) {
+    rm(MOZCENTRAL_DIFF);
+  }
+
+  var MOZCENTRAL_BASELINE_DIR = BUILD_DIR + 'mozcentral.baseline';
+  if (!test('-d', MOZCENTRAL_BASELINE_DIR)) {
+    echo('mozcentral baseline was not found');
+    echo('Please build one using "node make mozcentralbaseline"');
+    exit(1);
+  }
+  cd(MOZCENTRAL_BASELINE_DIR);
+  exec('git reset --hard');
+  cd(ROOT_DIR); rm('-rf', MOZCENTRAL_BASELINE_DIR + '/*'); // trying to be safe
+  cd(MOZCENTRAL_BASELINE_DIR);
+  mkdir('browser');
+  cd('browser');
+  mkdir('-p', 'extensions/pdfjs');
+  cp('-Rf', mcPath + '/browser/extensions/pdfjs/*', 'extensions/pdfjs');
+  mkdir('-p', 'locales/en-US/pdfviewer');
+  cp('-Rf', mcPath + '/browser/locales/en-US/pdfviewer/*',
+     'locales/en-US/pdfviewer');
+  // Remove '.DS_Store' and other hidden files
+  find('.').forEach(function(file) {
+    if (file.match(/^\.\w|~$/)) {
+      rm('-f', file);
+    }
+  });
+
+  cd('..');
+  exec('git add -A');
+  var diff = exec('git diff --binary --cached --unified=8',
+                  {silent: true}).output;
+
+  if (diff) {
+    echo('There were changes found at mozilla-central.');
+    diff.to('../mozcentral_changes.diff');
+    echo('Result diff can be found at ' + MOZCENTRAL_DIFF);
+    exit(1);
+  }
+
+  echo('Success: there are no changes at mozilla-central');
 };
 
 

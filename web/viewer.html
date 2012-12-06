@@ -26,7 +26,7 @@ limitations under the License.
 
     <link rel="stylesheet" href="viewer.css"/>
 <!--#if !PRODUCTION-->
-    <link rel="resource" type="application/l10n" href="locale.properties"/>
+    <link rel="resource" type="application/l10n" href="locale/locale.properties"/>
 <!--#endif-->
 
 <!--#if !(FIREFOX || MOZCENTRAL || CHROME)-->
@@ -69,10 +69,6 @@ limitations under the License.
 <!--#include viewer-snippet.html-->
 <!--#endif-->
 
-<!--#if B2G-->
-<!--#include viewer-snippet-b2g.html-->
-<!--#endif-->
-
     <script type="text/javascript" src="debugger.js"></script>
     <script type="text/javascript" src="viewer.js"></script>
   </head>
@@ -81,13 +77,15 @@ limitations under the License.
     <div id="outerContainer">
 
       <div id="sidebarContainer">
-        <div id="toolbarSidebar" class="splitToolbarButton toggled">
-          <button id="viewThumbnail" class="toolbarButton group toggled" title="Show Thumbnails" tabindex="1" data-l10n-id="thumbs">
-             <span data-l10n-id="thumbs_label">Thumbnails</span>
-          </button>
-          <button id="viewOutline" class="toolbarButton group" title="Show Document Outline" tabindex="2" data-l10n-id="outline">
-             <span data-l10n-id="outline_label">Document Outline</span>
-          </button>
+        <div id="toolbarSidebar">
+          <div class="splitToolbarButton toggled">
+            <button id="viewThumbnail" class="toolbarButton group toggled" title="Show Thumbnails" tabindex="1" data-l10n-id="thumbs">
+               <span data-l10n-id="thumbs_label">Thumbnails</span>
+            </button>
+            <button id="viewOutline" class="toolbarButton group" title="Show Document Outline" tabindex="2" data-l10n-id="outline">
+               <span data-l10n-id="outline_label">Document Outline</span>
+            </button>
+          </div>
         </div>
         <div id="sidebarContent">
           <div id="thumbnailView">

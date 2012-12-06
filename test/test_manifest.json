@@ -367,6 +367,12 @@
        "pageLimit": 3,
        "type": "eq"
     },
+    {  "id": "issue1905",
+       "file": "pdfs/issue1905.pdf",
+       "md5": "b1bbd72ca6522ae1502aa26320f81994",
+       "rounds": 1,
+       "type": "eq"
+    },
     {  "id": "issue918",
        "file": "pdfs/issue918.pdf",
        "md5": "d582cc0f2592ae82936589ced2a47e55",
@@ -707,6 +713,14 @@
       "link": true,
       "type": "eq"
     },
+    {  "id": "issue2006",
+      "file": "pdfs/issue2006.pdf",
+      "md5": "71ec73831ece9b508ad20efa6ff28642",
+      "rounds": 1,
+      "pageLimit": 1,
+      "link": true,
+      "type": "eq"
+    },
     {  "id": "issue1729",
       "file": "pdfs/issue1729.pdf",
       "md5": "29b0eddc3e1dcb23a44384037032d470",
@@ -719,6 +733,29 @@
       "file": "pdfs/issue1985.pdf",
       "md5": "2ac7c68e26a8ef797aead15e4875cc6d",
       "rounds": 1,
+      "type": "load"
+    },
+    {  "id": "issue1998",
+      "file": "pdfs/issue1998.pdf",
+      "md5": "586e0213be2f461360ec26770b5a4e48",
+      "rounds": 1,
+      "pageLimit": 2,
+      "link": true,
+      "type": "load"
+    },
+    {  "id": "issue1878",
+      "file": "pdfs/issue1878.pdf",
+      "md5": "b4fb0ce7c19368e7104dce3d0d34bcb3",
+      "rounds": 1,
+      "link": true,
+      "type": "load"
+    },
+    {  "id": "issue2337",
+      "file": "pdfs/issue2337.pdf",
+      "md5": "ea10f4131202b9b8f2a6cb7770d3f185",
+      "rounds": 1,
+      "pageLimit": 1,
+      "link": true,
       "type": "load"
     },
     {  "id": "issue2074",
