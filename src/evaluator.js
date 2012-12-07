@@ -279,6 +279,18 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
         fn = 'paintImageXObject';
 
+        if (PDFJS.skipImages === true) {
+            console.error('PDFJS.skipImages -- returning one-pixel imgData');
+
+            var imgData = {
+              width: 1,
+              height: 1,
+              data: new Uint8Array(1)
+            };
+            //var pixels = imgData.data;
+            //imageObj.fillRgbaBuffer(pixels, drawWidth, drawHeight);
+            handler.send('obj', [objId, pageIndex, 'Image', imgData]);
+        } else {
         PDFImage.buildImage(function(imageObj) {
             var drawWidth = imageObj.drawWidth;
             var drawHeight = imageObj.drawHeight;
@@ -291,6 +303,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             imageObj.fillRgbaBuffer(pixels, drawWidth, drawHeight);
             handler.send('obj', [objId, pageIndex, 'Image', imgData]);
           }, handler, xref, resources, image, inline);
+        }
       }
 
       if (!queue)
