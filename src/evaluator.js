@@ -280,7 +280,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         fn = 'paintImageXObject';
 
         if (PDFJS.skipImages === true) {
-            console.error('PDFJS.skipImages -- returning one-pixel imgData');
+            //console.error('PDFJS.skipImages -- returning one-pixel imgData');
 
             var imgData = {
               width: 1,
