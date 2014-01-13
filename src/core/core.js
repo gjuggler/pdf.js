@@ -166,6 +166,7 @@ var Page = (function PageClosure() {
       var dataPromises = Promise.all(
           [contentStreamPromise, resourcesPromise], reject);
       dataPromises.then(function(data) {
+          try {
         var contentStream = data[0];
 
 
@@ -177,6 +178,9 @@ var Page = (function PageClosure() {
         });
         partialEvaluator.getOperatorList(contentStream, self.resources, opList);
         pageListPromise.resolve(opList);
+          } catch (e) {
+            reject(e);
+          }
       });
 
       var annotationsPromise = pdfManager.ensure(this, 'annotations');
