@@ -1484,7 +1484,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 })();
 
 var OperatorList = (function OperatorListClosure() {
-  var CHUNK_SIZE = 100;
+    var CHUNK_SIZE = 20;
 
     function getTransfers(queue) {
       var transfers = [];
