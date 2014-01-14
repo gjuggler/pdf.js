@@ -232,6 +232,11 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       var w = dict.get('Width', 'W');
       var h = dict.get('Height', 'H');
 
+      if (PDFJS.maxImageSize !== -1 && w * h > PDFJS.maxImageSize) {
+        warn('Image exceeded maximum allowed size and was removed.');
+        return null;
+      }
+
       var dependencies = {};
       var retData = {
         dependencies: dependencies
@@ -702,6 +707,10 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   } else if ('Image' == type.name) {
                     var data = self.buildPaintImageXObject(
                         resources, xobj, false);
+                    if (!data) {
+                      args = [];
+                      continue;
+                    }
                     Util.extendObj(dependencies, data.dependencies);
                     self.insertDependencies(queue, data.dependencies);
                     fn = data.fn;
@@ -716,6 +725,10 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               } else if (cmd == 'EI') {
                 var data = self.buildPaintImageXObject(
                     resources, args[0], true);
+                if (!data) {
+                  args = [];
+                  continue;
+                }
                 Util.extendObj(dependencies, data.dependencies);
                 self.insertDependencies(queue, data.dependencies);
                 fn = data.fn;
